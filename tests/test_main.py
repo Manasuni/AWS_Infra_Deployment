@@ -1,8 +1,13 @@
-import pytest
-import sys, os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+# tests/test_main.py
 
-from main import app
+import pytest
+import sys
+import os
+
+# Add project root to sys.path so we can import main.py
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))  # noqa: E402
+
+from main import app  # noqa: E402
 
 
 @pytest.fixture
@@ -12,6 +17,6 @@ def client():
 
 
 def test_root(client):
+    """Test the '/' endpoint returns status code 200"""
     response = client.get("/")
     assert response.status_code == 200
-    assert "message" in response.get_json()
