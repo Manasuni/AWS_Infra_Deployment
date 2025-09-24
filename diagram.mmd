@@ -1,0 +1,40 @@
+flowchart LR
+  subgraph AWS [AWS Account]
+    direction TB
+    VPC["VPC\n(10.0.0.0/16)\nPublic + Private Subnets (2 AZs)"]
+    IGW[Internet Gateway]
+    NAT[NAT Gateways (one per AZ)]
+    ALB[ALB (public) / Ingress]
+    EKS["EKS Cluster\n- Istio (service mesh)\n- Helm charts"]
+    NG1["Node Group (OnDemand)"]
+    NG2["Node Group (Spot)"]
+    RDS["RDS PostgreSQL\nMulti-AZ (private)"]
+    REDIS["ElastiCache Redis\nReplication Group"]
+    S3["S3 Static Assets\n(versioning + encryption)"]
+    TFSTATE["S3 TFState (encrypted) + DynamoDB lock"]
+    KMS[KMS Key(s)]
+    IAM["IAM Roles & Policies"]
+    CW["CloudWatch\nDashboards / Logs / Alarms"]
+    GUARD["GuardDuty & AWS Config"]
+    SNS["SNS Topic -> Alerts"]
+    LAMBDA["Lambda (PII filter)"]
+  end
+
+  VPC --> IGW
+  VPC --> NAT
+  ALB -->|routes| EKS
+  EKS --> NG1
+  EKS --> NG2
+  EKS --> RDS
+  EKS --> REDIS
+  EKS --> S3
+  RDS --> KMS
+  REDIS --> KMS
+  S3 --> KMS
+  TFSTATE --> KMS
+  EKS --> CW
+  RDS --> CW
+  GUARD --> IAM
+  CW --> SNS --> LAMBDA
+  LAMBDA -.-> CW
+  IAM --> EKS
