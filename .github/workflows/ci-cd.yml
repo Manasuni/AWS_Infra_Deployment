@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CICD Pipeline
 
 on:
   push:
@@ -6,89 +6,82 @@ on:
       - cicd
   pull_request:
     branches:
-      - main
+      - cicd
 
 env:
-  AWS_REGION: ap-south-1
-  ECR_REPOSITORY: 533267338763.dkr.ecr.ap-south-1.amazonaws.com/my-python-app
-  IMAGE_TAG: ${{ github.sha }}
+  IMAGE_NAME: my-python-app
+  CLUSTER_NAME: my-python-cluster
+  HELM_RELEASE: my-python-app
+  HELM_CHART_PATH: ./helm-chart
 
 jobs:
-  build-test-deploy:
+  build-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout code
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      # 2️⃣ Set up Python
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.13
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.13
 
-      # 3️⃣ Install dependencies
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest flake8 boto3
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 pytest boto3
 
-      # 4️⃣ Run linting
-      - name: Lint code
-        run: flake8 main.py tests/
+    - name: Lint Python code
+      run: flake8 main.py tests/
 
-      # 5️⃣ Run unit tests
-      - name: Run tests
-        run: pytest -v
+    - name: Run tests
+      run: pytest -v
 
-      # 6️⃣ Set up AWS credentials
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.SECRET_KEY }}
-          aws-secret-access-key: ${{ secrets.Password }}
-          aws-region: ap-south-1
+    # ---------------- Terraform ----------------
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v3
+      with:
+        aws-access-key-id: ${{ secrets.SECRET_KEY }}
+        aws-secret-access-key: ${{ secrets.PASSWORD }}
+        aws-region: ${{ secrets.AWS_REGION }}
 
-      # 7️⃣ Terraform init & validate
-      - name: Terraform Init & Validate
-        run: |
-          cd terraform
-          terraform init
-          terraform fmt -check
-          terraform validate
+    - name: Terraform Init
+      working-directory: ./terraform
+      run: terraform init
 
-      # 8️⃣ Build Docker image
-      - name: Build Docker image
-        run: |
-          docker build -t ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} .
+    - name: Terraform Validate
+      working-directory: ./terraform
+      run: terraform validate
 
-      # 9️⃣ Log in to ECR
-      - name: Login to Amazon ECR
-        id: ecr-login
-        uses: aws-actions/amazon-ecr-login@v2
+    - name: Terraform Apply
+      working-directory: ./terraform
+      run: terraform apply -auto-approve \
+        -var "region=${{ secrets.AWS_REGION }}" \
+        -var "cluster_name=${{ env.CLUSTER_NAME }}" \
+        -var "eks_role_arn=${{ secrets.EKS_CLUSTER_ROLE_ARN }}" \
+        -var "node_role_arn=${{ secrets.EKS_NODEGROUP_ROLE_ARN }}" \
+        -var "subnet_ids=[${{ secrets.SUBNET_IDS }}]"
 
-      # 🔟 Push Docker image to ECR
-      - name: Push Docker image
-        run: |
-          docker push ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+    # ---------------- Docker + ECR ----------------
+    - name: Login to Amazon ECR
+      uses: aws-actions/amazon-ecr-login@v2
 
-      # 1️⃣1️⃣ Deploy to EKS using Helm
-      - name: Set up kubectl
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+    - name: Build and Push Docker Image
+      run: |
+        docker build -t $IMAGE_NAME:latest .
+        docker tag $IMAGE_NAME:latest ${{ secrets.ECR_URI }}:latest
+        docker push ${{ secrets.ECR_URI }}:latest
 
-      - name: Update kubeconfig
-        run: |
-          aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name my-python-cluster
+    # ---------------- Helm + EKS ----------------
+    - name: Configure kubectl
+      run: aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name $CLUSTER_NAME
 
-      - name: Helm deploy
-        run: |
-          helm upgrade --install my-python-app helm-chart \
-            --set image.repository=${{ env.ECR_REPOSITORY }} \
-            --set image.tag=${{ env.IMAGE_TAG }} \
-            --wait
+    - name: Deploy Helm Chart
+      run: helm upgrade --install $HELM_RELEASE $HELM_CHART_PATH
+
+    # ---------------- CloudWatch Logging (Optional) ----------------
+    - name: Verify Pods and Logs
+      run: |
+        kubectl get pods
+        kubectl get services
