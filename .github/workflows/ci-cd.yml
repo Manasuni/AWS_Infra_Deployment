@@ -1,33 +1,94 @@
-name: CICD Pipeline
+name: CI/CD Pipeline
 
 on:
   push:
     branches:
-      - cicd   # Only runs on pushes to cicd branch
+      - main
   pull_request:
     branches:
-      - cicd
+      - main
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_REPOSITORY: 533267338763.dkr.ecr.ap-south-1.amazonaws.com/my-python-app
+  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
-  build-test:
+  build-test-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      # 1️⃣ Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v3
 
+      # 2️⃣ Set up Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.13'
+          python-version: 3.13
 
+      # 3️⃣ Install dependencies
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install pytest flake8 boto3
 
-      - name: Run lint (flake8)
+      # 4️⃣ Run linting
+      - name: Lint code
         run: flake8 main.py tests/
 
-      - name: Run tests (pytest)
+      # 5️⃣ Run unit tests
+      - name: Run tests
         run: pytest -v
+
+      # 6️⃣ Set up AWS credentials
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # 7️⃣ Terraform init & validate
+      - name: Terraform Init & Validate
+        run: |
+          cd terraform
+          terraform init
+          terraform fmt -check
+          terraform validate
+
+      # 8️⃣ Build Docker image
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} .
+
+      # 9️⃣ Log in to ECR
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # 🔟 Push Docker image to ECR
+      - name: Push Docker image
+        run: |
+          docker push ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+
+      # 1️⃣1️⃣ Deploy to EKS using Helm
+      - name: Set up kubectl
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name my-python-cluster
+
+      - name: Helm deploy
+        run: |
+          helm upgrade --install my-python-app helm-chart \
+            --set image.repository=${{ env.ECR_REPOSITORY }} \
+            --set image.tag=${{ env.IMAGE_TAG }} \
+            --wait
