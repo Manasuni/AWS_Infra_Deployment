@@ -11,9 +11,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Checkout code
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # 2. Configure AWS credentials via GitHub secrets
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -21,26 +23,32 @@ jobs:
           aws-secret-access-key: ${{ secrets.PASSWORD }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      # 3. Setup Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: latest
+          terraform_version: latest 
 
+      # 4. Terraform Init
       - name: Terraform Init
         run: terraform init
 
+      # 5. Terraform Plan
       - name: Terraform Plan
         run: terraform plan -out=tfplan
 
+      # 6. Terraform Apply
       - name: Terraform Apply
         if: github.ref == 'refs/heads/feature/security-iac'
         run: terraform apply -auto-approve tfplan
 
+      # 7. Create SSM Parameters (optional if Terraform handles them)
       - name: Create Example SSM Parameters
         run: |
           aws ssm put-parameter --name "/my-app/dev/db_password" --value "example-db-pass-123" --type SecureString --overwrite
           aws ssm put-parameter --name "/my-app/dev/api_key" --value "example-api-key-abc" --type SecureString --overwrite
 
+      # 8. Generate Gemini Security Report (mock)
       - name: Run Security Scan (Gemini mock)
         run: |
           echo "## Security Report" > security_report.md
@@ -49,3 +57,10 @@ jobs:
           echo "- GuardDuty enabled: ✅" >> security_report.md
           echo "- AWS Config rules applied: ✅" >> security_report.md
           cat security_report.md
+
+      # 9. Upload report as artifact
+      - name: Upload Security Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: security_report
+          path: security_report.md
