@@ -2,8 +2,9 @@ name: Terraform CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "feature/security-iac" ]
   pull_request:
+  workflow_dispatch:   # <-- Enables manual trigger button
 
 permissions:
   id-token: write
