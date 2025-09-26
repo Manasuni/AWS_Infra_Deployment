@@ -1,63 +1,62 @@
-name: Configure AWS credentials (OIDC)
-uses: aws-actions/configure-aws-credentials@v4
-with:
-  role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ secrets.OIDC_ROLE_NAME }}
-  aws-region: ap-south-1
+name: Security & Compliance Terraform CI/CD
 
+# Trigger workflow on push to feature branch or manual trigger
 on:
   push:
-    branches: [ "main", "feature/security-iac" ]
-  pull_request:
-  workflow_dispatch:   # <-- Enables manual trigger button
-
-permissions:
-  id-token: write
-  contents: read
-  pull-requests: write
+    branches:
+      - feature/security-iac
+  workflow_dispatch:
 
 jobs:
-  terraform-plan:
+  terraform-security:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
 
+    steps:
+      # Step 1: Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Step 2: Configure AWS credentials via OIDC
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::123456789012:role/ci-terraform-provisioner-dev
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ secrets.OIDC_ROLE_NAME }}
           aws-region: ap-south-1
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-
+      # Step 3: Terraform init
       - name: Terraform Init
-        run: terraform init
+        run: terraform init security/
 
+      # Step 4: Terraform plan
       - name: Terraform Plan
-        run: terraform plan -out=tfplan
+        run: terraform plan -out=tfplan security/
 
-  security-scan:
-    runs-on: ubuntu-latest
-    needs: terraform-plan
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      # Step 5: Terraform apply (only on this branch)
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/feature/security-iac'
+        run: terraform apply -auto-approve tfplan
 
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::123456789012:role/ci-scan-runner-dev
-          aws-region: ap-south-1
-
-      - name: Mock Gemini Scan
+      # Step 6: Retrieve SSM secrets (DB password & API key)
+      - name: Retrieve SSM Secrets
         run: |
-          echo "## Gemini Security Report" > reports/security-report.md
-          echo "- Found no hardcoded secrets" >> reports/security-report.md
-          echo "- Config rules validated" >> reports/security-report.md
-          echo "- GuardDuty enabled" >> reports/security-report.md
+          DB_PASSWORD=$(aws ssm get-parameter --name "/my-app/dev/db_password" --with-decryption --query "Parameter.Value" --output text)
+          API_KEY=$(aws ssm get-parameter --name "/my-app/dev/api_key" --with-decryption --query "Parameter.Value" --output text)
+          echo "DB_PASSWORD=$DB_PASSWORD" >> $GITHUB_ENV
+          echo "API_KEY=$API_KEY" >> $GITHUB_ENV
 
-      - name: Upload Security Report as PR Comment
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          path: reports/security-report.md
+      # Step 7: Run Security Scan (Gemini mock)
+      - name: Security Scan (Gemini)
+        run: |
+          echo "## Security Report" > security_report.md
+          echo "- Terraform code scanned with Gemini mock" >> security_report.md
+          echo "- No critical issues found (mock)" >> security_report.md
+          cat security_report.md
+
+      # Step 8: Post Gemini Security Report as PR comment (mock)
+      - name: Post Security Report
+        if: github.event_name == 'pull_request'
+        run: |
+          PR_NUMBER=$(jq --raw-output .pull_request.number "$GITHUB_EVENT_PATH")
+          echo "Posting mock security report to PR #$PR_NUMBER"
+          # Uncomment the line below if you want to actually comment using GitHub CLI
+          # gh pr comment $PR_NUMBER --body-file security_report.md
