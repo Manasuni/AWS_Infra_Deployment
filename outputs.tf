@@ -10,7 +10,14 @@ output "iam_role_arn" {
   value = module.iam.provisioner_role_arn
 }
 
-# output in root module
 output "guardduty_detector_id" {
   value = module.guardduty.guardduty_detector_id
+}
+
+output "config_bucket_name" {
+  value = module.config.config_bucket_name
+}
+
+output "config_recorder_role_arn" {
+  value = module.config.config_recorder_role_arn
 }

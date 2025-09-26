@@ -1,28 +1,32 @@
-variable "role_arn" {
-  type = string
-}
-
-# Random suffix for unique names
+# Generate random suffix for unique names
 resource "random_id" "suffix" {
   byte_length = 4
 }
 
 # S3 bucket for Config delivery channel
+resource "aws_s3_bucket" "config_bucket" {
+  bucket = "my-config-bucket-${random_id.suffix.hex}"
+}
+
+# ACL for S3 bucket
 resource "aws_s3_bucket_acl" "config_bucket_acl" {
   bucket = aws_s3_bucket.config_bucket.id
   acl    = "private"
 }
 
-# Configuration recorder
+# IAM Role input from IAM module
+# Expecting root to pass module.iam.provisioner_role_arn
+variable "role_arn" {
+  type = string
+}
+
+# Config recorder
 resource "aws_config_configuration_recorder" "recorder" {
   name     = "default"
   role_arn = var.role_arn
-}
-
-# Enable configuration recorder
-resource "aws_config_configuration_recorder_status" "recorder_status" {
-  name       = aws_config_configuration_recorder.recorder.name
-  is_enabled = true
+  recording_group {
+    all_supported = true
+  }
 }
 
 # Delivery channel
