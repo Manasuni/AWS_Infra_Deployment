@@ -60,7 +60,7 @@ jobs:
 
       # 9. Upload report as artifact
       - name: Upload Security Report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: security_report
           path: security_report.md
