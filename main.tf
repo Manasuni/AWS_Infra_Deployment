@@ -19,8 +19,3 @@ module "ssm" {
 module "guardduty" {
   source = "./modules/security"
 }
-
-# output in root module
-output "guardduty_detector_id" {
-  value = module.guardduty.guardduty_detector_id
-}
