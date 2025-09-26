@@ -9,10 +9,10 @@ resource "aws_s3_bucket" "config_bucket" {
 }
 
 # ACL for S3 bucket
-resource "aws_s3_bucket_acl" "config_bucket_acl" {
+/*resource "aws_s3_bucket_acl" "config_bucket_acl" {
   bucket = aws_s3_bucket.config_bucket.id
   acl    = "private"
-}
+}*/
 
 # IAM Role input from IAM module
 # Expecting root to pass module.iam.provisioner_role_arn
@@ -33,6 +33,11 @@ resource "aws_config_configuration_recorder" "recorder" {
 resource "aws_config_delivery_channel" "channel" {
   name           = "default"
   s3_bucket_name = aws_s3_bucket.config_bucket.bucket
+}
+
+resource "aws_config_configuration_recorder_status" "recorder_status" {
+  name       = aws_config_configuration_recorder.recorder.name
+  is_enabled = true
 }
 
 # Config rules
