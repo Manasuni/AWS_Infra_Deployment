@@ -1,0 +1,16 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "config:DescribeConfigRules",
+        "config:GetComplianceDetailsByConfigRule",
+        "config:ListDiscoveredResources",
+        "guardduty:Get*",
+        "ssm:GetParameter"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
