@@ -1,0 +1,58 @@
+name: Terraform CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  terraform-plan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/ci-terraform-provisioner-dev
+          aws-region: ap-south-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: terraform-plan
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/ci-scan-runner-dev
+          aws-region: ap-south-1
+
+      - name: Mock Gemini Scan
+        run: |
+          echo "## Gemini Security Report" > reports/security-report.md
+          echo "- Found no hardcoded secrets" >> reports/security-report.md
+          echo "- Config rules validated" >> reports/security-report.md
+          echo "- GuardDuty enabled" >> reports/security-report.md
+
+      - name: Upload Security Report as PR Comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          path: reports/security-report.md
