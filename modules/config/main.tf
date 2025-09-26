@@ -8,8 +8,8 @@ resource "random_id" "suffix" {
 }
 
 # S3 bucket for Config delivery channel
-resource "aws_s3_bucket" "config_bucket" {
-  bucket = "my-config-bucket-${random_id.suffix.hex}"
+resource "aws_s3_bucket_acl" "config_bucket_acl" {
+  bucket = aws_s3_bucket.config_bucket.id
   acl    = "private"
 }
 
