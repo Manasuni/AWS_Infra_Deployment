@@ -1,19 +1,3 @@
-# Generate random suffix for unique names
-resource "random_id" "suffix" {
-  byte_length = 4
-}
-
-# S3 bucket for Config delivery channel
-resource "aws_s3_bucket" "config_bucket" {
-  bucket = "my-config-bucket-${random_id.suffix.hex}"
-}
-
-# ACL for S3 bucket
-/*resource "aws_s3_bucket_acl" "config_bucket_acl" {
-  bucket = aws_s3_bucket.config_bucket.id
-  acl    = "private"
-}*/
-
 # IAM Role input from IAM module
 # Expecting root to pass module.iam.provisioner_role_arn
 variable "role_arn" {
