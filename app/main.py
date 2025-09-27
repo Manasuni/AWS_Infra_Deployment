@@ -18,7 +18,7 @@ if os.getenv("ENV", "dev") != "test":
         cw_handler = watchtower.CloudWatchLogHandler(
             boto3_client=boto3.client("logs", region_name=region),
             log_group="myapp-logs",
-            stream_name="app-stream",  # Ensure log group exists via Terraform/Helm
+            stream_name="app-stream",
         )
         logger.addHandler(cw_handler)
     except Exception as e:
