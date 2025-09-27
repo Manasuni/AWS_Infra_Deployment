@@ -59,7 +59,7 @@ jobs:
     needs: lint-test-validate
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/feature/cicd'
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -101,24 +101,6 @@ jobs:
             --region ${{ env.AWS_REGION }} \
             --name ${{ secrets.EKS_CLUSTER_NAME }}
 
-      - name: Verify cluster connectivity
-        run: |
-          set -euo pipefail
-          echo "Checking if cluster API is reachable..."
-          MAX_CHECKS=10
-          COUNT=0
-          until kubectl cluster-info > /dev/null 2>&1
-          do
-            COUNT=$((COUNT + 1))
-            if [ $COUNT -ge $MAX_CHECKS ]; then
-              echo "Cannot reach cluster API after $MAX_CHECKS attempts. Exiting."
-              exit 1
-            fi
-            echo "Cluster API not reachable yet. Retrying in 15 seconds..."
-            sleep 15
-          done
-          echo "Cluster API is reachable."
-
       - name: Wait for EKS nodes to be Ready
         run: |
           echo "Waiting for all EKS nodes to be Ready..."
@@ -138,12 +120,20 @@ jobs:
           echo "All nodes are Ready:"
           kubectl get nodes
 
-      - name: Deploy with Helm (rolling update with retries)
+      - name: Deploy with Helm (rolling update + dynamic timeout + retries)
         run: |
+          NAMESPACE="default"
           MAX_RETRIES=3
           COUNT=0
+          
+          # Calculate dynamic timeout based on number of nodes (5 min per node)
+          NODE_COUNT=$(kubectl get nodes --no-headers | wc -l)
+          HELM_TIMEOUT=$((NODE_COUNT * 5))m
+          echo "Detected $NODE_COUNT nodes. Setting Helm timeout to $HELM_TIMEOUT."
+
           until helm upgrade --install myapp ./helm-chart \
-            --timeout 10m \
+            --namespace $NAMESPACE \
+            --timeout $HELM_TIMEOUT \
             --wait \
             --set image.repository=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY \
             --set image.tag=$IMAGE_TAG
