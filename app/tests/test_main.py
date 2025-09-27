@@ -2,9 +2,11 @@ import os
 import pytest
 from main import app
 
+
 @pytest.fixture
 def client():
     return app.test_client()
+
 
 def test_hello_route_with_mock(monkeypatch):
     # Mock boto3 client

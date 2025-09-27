@@ -1,5 +1,6 @@
-import os
 import logging
+import os
+
 from flask import Flask, jsonify
 import boto3
 import watchtower
@@ -23,7 +24,7 @@ logger.addHandler(cw_handler)
 
 def get_parameter(name, with_decryption=False):
     """Fetch parameter from SSM Parameter Store."""
-    ssm = boto3.client("ssm", region_name=os.getenv("AWS_REGION", "ap-south-1"))
+    ssm = boto3.client("ssm", region_name=region)
     response = ssm.get_parameter(Name=name, WithDecryption=with_decryption)
     return response["Parameter"]["Value"]
 
@@ -35,9 +36,13 @@ def hello():
 
     try:
         message = get_parameter(param_name)
-        logger.info(f"Fetched SSM param {param_name} = {message}")
+        logger.info(
+            f"Fetched SSM param {param_name} = {message}"
+        )
     except Exception as e:
-        logger.error(f"Failed to fetch parameter {param_name}: {e}")
+        logger.error(
+            f"Failed to fetch parameter {param_name}: {e}"
+        )
         message = default_msg
 
     return jsonify({"message": message})
