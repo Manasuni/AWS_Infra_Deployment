@@ -146,3 +146,29 @@ jobs:
             echo "Helm deploy failed. Retrying in 30 seconds..."
             sleep 30
           done
+      - name: Smoke Test Deployment
+        run: |
+          echo "Running smoke test for the deployed app..."
+          SERVICE_IP=$(kubectl get svc myapp -n default -o jsonpath='{.spec.clusterIP}')
+          RETRIES=10
+          COUNT=0
+          SUCCESS=false
+          
+          until [ $COUNT -ge $RETRIES ]
+          do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://$SERVICE_IP/health || echo "000")
+            if [ "$HTTP_CODE" == "200" ]; then
+              echo "Smoke test passed! App is reachable at $SERVICE_IP"
+              SUCCESS=true
+              break
+            else
+              echo "Attempt $((COUNT+1))/$RETRIES: App not ready (HTTP $HTTP_CODE). Retrying in 15s..."
+              sleep 15
+              COUNT=$((COUNT+1))
+            fi
+          done
+          
+          if [ "$SUCCESS" != "true" ]; then
+            echo "Smoke test failed. App is not reachable after $RETRIES attempts."
+            exit 1
+          fi
