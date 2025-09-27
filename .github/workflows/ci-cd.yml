@@ -37,6 +37,7 @@ jobs:
       - name: Run pytest
         run: |
           export PYTHONPATH=.
+          export ENV=test
           pytest app/tests --maxfail=1 --disable-warnings -q
 
       - name: Set up Terraform

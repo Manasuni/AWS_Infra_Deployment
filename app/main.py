@@ -6,19 +6,23 @@ import os
 
 app = Flask(__name__)
 
-# Configure logging to CloudWatch
+# Configure logging
 logger = logging.getLogger("myapp")
 logger.setLevel(logging.INFO)
 
 region = os.getenv("AWS_REGION", "ap-south-1")
 
-# Stream logs to CloudWatch (requires IAM permissions)
-cw_handler = watchtower.CloudWatchLogHandler(
-    boto3_client=boto3.client("logs", region_name=region),
-    log_group="myapp-logs",
-    stream_name="app-stream",  # Ensure log group exists via Terraform/Helm
-)
-logger.addHandler(cw_handler)
+# Only enable CloudWatch logging outside test environments
+if os.getenv("ENV", "dev") != "test":
+    try:
+        cw_handler = watchtower.CloudWatchLogHandler(
+            boto3_client=boto3.client("logs", region_name=region),
+            log_group="myapp-logs",
+            stream_name="app-stream",  # Ensure log group exists via Terraform/Helm
+        )
+        logger.addHandler(cw_handler)
+    except Exception as e:
+        logger.warning(f"CloudWatch logging disabled: {e}")
 
 
 def get_parameter(name, with_decryption=False):
