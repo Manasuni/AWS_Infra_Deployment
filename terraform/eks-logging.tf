@@ -158,7 +158,7 @@ resource "aws_eks_node_group" "my_nodes" {
   cluster_name    = aws_eks_cluster.this.name
   node_group_name = "my-node-group"
   node_role_arn   = aws_iam_role.eks_node_role.arn
-  subnet_ids      = [
+  subnet_ids = [
     aws_subnet.eks_subnet_a.id,
     aws_subnet.eks_subnet_b.id
   ]

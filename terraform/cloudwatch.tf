@@ -4,7 +4,7 @@ resource "aws_cloudwatch_log_group" "myapp" {
   retention_in_days = 7
 
   tags = {
-    Name = "myapp-logs"
+    Name        = "myapp-logs"
     Environment = "non-prod"
   }
 }
