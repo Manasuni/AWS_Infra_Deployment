@@ -16,7 +16,7 @@ jobs:
   # ----------------------------
   lint-test-validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20   # avoid hanging jobs
+    timeout-minutes: 20
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -38,12 +38,12 @@ jobs:
         run: |
           export PYTHONPATH=.
           export ENV=test
-          pytest app/tests --maxfail=1 --disable-warnings -q
+          python3 -m pytest app/tests --maxfail=1 --disable-warnings -q
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 'latest'
+          terraform_version: '1.7.9'
 
       - name: Terraform fmt & validate
         run: |
@@ -59,7 +59,7 @@ jobs:
     needs: lint-test-validate
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/feature/cicd'
-    timeout-minutes: 60   # increase timeout for Docker build/push + Helm deploy
+    timeout-minutes: 60
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -67,8 +67,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.SECRET_KEY }}
-          aws-secret-access-key: ${{ secrets.PASSWORD }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
