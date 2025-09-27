@@ -14,10 +14,11 @@ logger.setLevel(logging.INFO)
 region = os.getenv("AWS_REGION", "ap-south-1")
 
 # Stream logs to CloudWatch (requires IAM permissions)
+# Stream logs to CloudWatch (requires IAM permissions)
 cw_handler = watchtower.CloudWatchLogHandler(
     boto3_client=boto3.client("logs", region_name=region),
-    log_group="myapp-logs",  # Terraform/Helm should ensure this log group exists
-    stream_name="app-stream"
+    log_group="myapp-logs",
+    stream_name="app-stream",  # Ensure this log group exists via Terraform/Helm
 )
 logger.addHandler(cw_handler)
 

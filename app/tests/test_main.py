@@ -23,4 +23,5 @@ def test_hello_route_with_mock(monkeypatch):
     client = app.test_client()
     resp = client.get("/")
     assert resp.status_code == 200
-    assert resp.json["message"] == "Test from SSM"
+    assert resp.json["message"] == \
+       "Test from SSM"
