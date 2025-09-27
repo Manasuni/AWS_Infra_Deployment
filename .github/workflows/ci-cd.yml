@@ -59,7 +59,7 @@ jobs:
     needs: lint-test-validate
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/feature/cicd'
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -101,10 +101,40 @@ jobs:
             --region ${{ env.AWS_REGION }} \
             --name ${{ secrets.EKS_CLUSTER_NAME }}
 
-      - name: Deploy with Helm (rolling update)
+      - name: Wait for EKS nodes to be Ready
         run: |
-          helm upgrade --install myapp ./helm-chart \
+          echo "Waiting for all EKS nodes to be Ready..."
+          RETRIES=20
+          COUNT=0
+          until kubectl get nodes --no-headers | awk '{print $2}' | grep -vq NotReady
+          do
+            COUNT=$((COUNT + 1))
+            if [ $COUNT -ge $RETRIES ]; then
+              echo "Nodes not ready after $RETRIES attempts. Exiting."
+              kubectl get nodes
+              exit 1
+            fi
+            echo "Nodes not ready yet. Retrying in 30 seconds..."
+            sleep 30
+          done
+          echo "All nodes are Ready:"
+          kubectl get nodes
+
+      - name: Deploy with Helm (rolling update with retries)
+        run: |
+          MAX_RETRIES=3
+          COUNT=0
+          until helm upgrade --install myapp ./helm-chart \
             --timeout 10m \
             --wait \
             --set image.repository=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY \
             --set image.tag=$IMAGE_TAG
+          do
+            COUNT=$((COUNT + 1))
+            if [ $COUNT -ge $MAX_RETRIES ]; then
+              echo "Helm deploy failed after $MAX_RETRIES attempts. Exiting."
+              exit 1
+            fi
+            echo "Helm deploy failed. Retrying in 30 seconds..."
+            sleep 30
+          done
