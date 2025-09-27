@@ -10,7 +10,7 @@ on:
         description: 'Target environment'
         required: false
         default: 'non-prod'
-        
+
 env:
   AWS_REGION: ap-south-1
   ECR_REPOSITORY: myapp-repo
@@ -172,7 +172,7 @@ jobs:
 
           until [ $COUNT -ge $RETRIES ]
           do
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/health || echo "000")
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/ || echo "000")
             if [ "$HTTP_CODE" == "200" ]; then
               echo "Smoke test passed! App reachable at localhost:8080"
               SUCCESS=true
