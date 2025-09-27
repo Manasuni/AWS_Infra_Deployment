@@ -1,7 +1,5 @@
-import os
 import pytest
 from main import app
-
 
 @pytest.fixture
 def client():
@@ -15,7 +13,11 @@ def test_hello_route_with_mock(monkeypatch):
             return {"Parameter": {"Value": "Test from SSM"}}
 
     import boto3
-    monkeypatch.setattr(boto3, "client", lambda *args, **kwargs: DummySSMClient())
+    monkeypatch.setattr(
+        boto3,
+        "client",
+        lambda *args, **kwargs: DummySSMClient()
+    )
 
     monkeypatch.setenv("SSM_PARAM_NAME", "/myapp/hello_msg")
     monkeypatch.setenv("AWS_REGION", "ap-south-1")
@@ -24,4 +26,4 @@ def test_hello_route_with_mock(monkeypatch):
     resp = client.get("/")
     assert resp.status_code == 200
     assert resp.json["message"] == \
-       "Test from SSM"
+           "Test from SSM"
