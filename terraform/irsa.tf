@@ -9,9 +9,10 @@ data "aws_eks_cluster_auth" "this" {
 
 resource "aws_iam_openid_connect_provider" "eks" {
   client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = ["9e99a48a9960b14926bb7f3b02e22da2b0ab7280"] # standard for AWS OIDC
-  url             = "https://oidc.eks.ap-south-1.amazonaws.com/id/6C8F735F515146506C0D4025E799C27B"
+  thumbprint_list = ["9e99a48a9960b14926bb7f3b02e22da2b0ab7280"] # correct root CA for AWS OIDC
+  url             = "https://oidc.eks.ap-south-1.amazonaws.com/id/890A8AF5872BC3DFF7B1F22F53BEA88E"
 }
+
 
 # IAM Role for ServiceAccount
 resource "aws_iam_role" "myapp" {

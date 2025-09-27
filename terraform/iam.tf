@@ -1,4 +1,5 @@
-# IAM Policy for MyApp Pods
+data "aws_caller_identity" "current" {}
+
 data "aws_iam_policy_document" "myapp" {
   statement {
     actions = [
@@ -6,7 +7,9 @@ data "aws_iam_policy_document" "myapp" {
       "ssm:GetParameters",
       "ssm:GetParametersByPath"
     ]
-    resources = ["*"]
+    resources = [
+      "arn:aws:ssm:ap-south-1:${data.aws_caller_identity.current.account_id}:parameter/myapp/hello_msg"
+    ]
   }
 
   statement {
@@ -14,7 +17,9 @@ data "aws_iam_policy_document" "myapp" {
       "logs:CreateLogStream",
       "logs:PutLogEvents"
     ]
-    resources = ["arn:aws:logs:*:*:log-group:/eks/myapp-logs*:*"]
+    resources = [
+      "arn:aws:logs:ap-south-1:${data.aws_caller_identity.current.account_id}:log-group:/eks/myapp-logs*:*"
+    ]
   }
 }
 

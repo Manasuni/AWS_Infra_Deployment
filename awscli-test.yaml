@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: awscli-test
+  namespace: default
+spec:
+  serviceAccountName: myapp-sa
+  containers:
+  - name: awscli
+    image: amazonlinux:2
+    command: ["/bin/bash", "-c", "sleep 3600"]
+  restartPolicy: Never
