@@ -53,7 +53,7 @@ jobs:
           terraform validate
 
   # ----------------------------
-  # JOB 2: Build Docker + Push + Deploy
+  # JOB 2: Build Docker + Push + Deploy + Smoke Test
   # ----------------------------
   build-push-deploy:
     needs: lint-test-validate
@@ -79,13 +79,10 @@ jobs:
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build Docker image
+      - name: Build & Push Docker image
         run: |
           docker build -t $ECR_REPOSITORY:$IMAGE_TAG app/
           docker tag $ECR_REPOSITORY:$IMAGE_TAG ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
-
-      - name: Push Docker image
-        run: |
           docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
 
       - name: Terraform Apply (non-prod)
@@ -120,13 +117,11 @@ jobs:
           echo "All nodes are Ready:"
           kubectl get nodes
 
-      - name: Deploy with Helm (rolling update + dynamic timeout + retries)
+      - name: Deploy with Helm (rolling update + retries)
         run: |
           NAMESPACE="default"
           MAX_RETRIES=3
           COUNT=0
-          
-          # Calculate dynamic timeout based on number of nodes (5 min per node)
           NODE_COUNT=$(kubectl get nodes --no-headers | wc -l)
           HELM_TIMEOUT=$((NODE_COUNT * 5))m
           echo "Detected $NODE_COUNT nodes. Setting Helm timeout to $HELM_TIMEOUT."
@@ -146,19 +141,34 @@ jobs:
             echo "Helm deploy failed. Retrying in 30 seconds..."
             sleep 30
           done
+
       - name: Smoke Test Deployment
         run: |
-          echo "Running smoke test for the deployed app..."
-          SERVICE_IP=$(kubectl get svc myapp-myapp -n default -o jsonpath='{.spec.clusterIP}')
+          echo "Running smoke test..."
+          NAMESPACE="default"
+
+          # Detect Helm service dynamically
+          SERVICE_NAME=$(kubectl get svc -n $NAMESPACE -l app.kubernetes.io/instance=myapp -o jsonpath='{.items[0].metadata.name}')
+          if [ -z "$SERVICE_NAME" ]; then
+            echo "Error: Helm service not found"
+            exit 1
+          fi
+          echo "Detected service: $SERVICE_NAME"
+
+          # Port-forward to access ClusterIP
+          kubectl port-forward svc/$SERVICE_NAME 8080:80 -n $NAMESPACE &
+          PF_PID=$!
+          sleep 5
+
           RETRIES=10
           COUNT=0
           SUCCESS=false
-          
+
           until [ $COUNT -ge $RETRIES ]
           do
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://$SERVICE_IP/health || echo "000")
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/health || echo "000")
             if [ "$HTTP_CODE" == "200" ]; then
-              echo "Smoke test passed! App is reachable at $SERVICE_IP"
+              echo "Smoke test passed! App reachable at localhost:8080"
               SUCCESS=true
               break
             else
@@ -167,8 +177,11 @@ jobs:
               COUNT=$((COUNT+1))
             fi
           done
-          
+
+          # Stop port-forward
+          kill $PF_PID
+
           if [ "$SUCCESS" != "true" ]; then
-            echo "Smoke test failed. App is not reachable after $RETRIES attempts."
+            echo "Smoke test failed. App not reachable."
             exit 1
           fi
