@@ -4,7 +4,13 @@ on:
   push:
     branches:
       - feature/cicd
-
+  workflow_dispatch:   # <-- Add this
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: false
+        default: 'non-prod'
+        
 env:
   AWS_REGION: ap-south-1
   ECR_REPOSITORY: myapp-repo
