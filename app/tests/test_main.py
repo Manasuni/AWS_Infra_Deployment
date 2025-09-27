@@ -1,5 +1,5 @@
 import pytest
-from app.main import app
+from app.main import app  # updated import to reflect package structure
 
 
 @pytest.fixture
@@ -15,9 +15,7 @@ def test_hello_route_with_mock(monkeypatch):
 
     import boto3
     monkeypatch.setattr(
-        boto3,
-        "client",
-        lambda *args, **kwargs: DummySSMClient()
+        boto3, "client", lambda *args, **kwargs: DummySSMClient()
     )
 
     monkeypatch.setenv("SSM_PARAM_NAME", "/myapp/hello_msg")
@@ -25,6 +23,6 @@ def test_hello_route_with_mock(monkeypatch):
 
     client = app.test_client()
     resp = client.get("/")
+    expected_message = "Test from SSM"
     assert resp.status_code == 200
-    assert resp.json["message"] == \
-           "Test from SSM"
+    assert resp.json["message"] == expected_message
