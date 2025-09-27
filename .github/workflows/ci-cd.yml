@@ -58,7 +58,7 @@ jobs:
   build-push-deploy:
     needs: lint-test-validate
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/cicd')
     timeout-minutes: 60   # increase timeout for Docker build/push + Helm deploy
     steps:
       - name: Checkout code
