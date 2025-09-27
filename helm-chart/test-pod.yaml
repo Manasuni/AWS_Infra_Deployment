@@ -1,0 +1,15 @@
+# test-pod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-myapp
+spec:
+  containers:
+    - name: myapp
+      image: 533267338763.dkr.ecr.ap-south-1.amazonaws.com/myapp-repo:latest
+      ports:
+        - containerPort: 5000
+  serviceAccountName: myapp-sa
+  imagePullSecrets:
+    - name: ecr-secret
+

@@ -1,0 +1,4 @@
+-r requirements.txt
+pytest==7.4.4
+flake8==6.1.0
+moto==4.2.14
