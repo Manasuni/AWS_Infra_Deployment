@@ -149,7 +149,7 @@ jobs:
       - name: Smoke Test Deployment
         run: |
           echo "Running smoke test for the deployed app..."
-          SERVICE_IP=$(kubectl get svc myapp -n default -o jsonpath='{.spec.clusterIP}')
+          SERVICE_IP=$(kubectl get svc myapp-myapp -n default -o jsonpath='{.spec.clusterIP}')
           RETRIES=10
           COUNT=0
           SUCCESS=false
