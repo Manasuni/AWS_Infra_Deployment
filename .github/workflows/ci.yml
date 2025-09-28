@@ -3,7 +3,7 @@ name: Security & Compliance Terraform CI/CD
 on:
   push:
     branches:
-      - feature/security-iac
+      - feature/security
   workflow_dispatch:
 
 jobs:
