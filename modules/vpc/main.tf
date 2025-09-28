@@ -59,14 +59,17 @@ resource "aws_route_table_association" "public_assoc" {
   route_table_id = aws_route_table.public.id
 }
 
-# Private route tables with NAT
+# Private route tables — one per private subnet / AZ
 resource "aws_route_table" "private" {
-  vpc_id = aws_vpc.this.id
+  for_each = aws_subnet.private
+  vpc_id   = aws_vpc.this.id
+  tags = { Name = "${var.project_name}-${var.environment}-private-${each.key}" }
 }
 
+# NAT routes — each private route table gets its own NAT gateway
 resource "aws_route" "private_to_nat" {
-  for_each = aws_nat_gateway.nat
-  route_table_id         = aws_route_table.private.id
+  for_each = aws_subnet.private
+  route_table_id         = aws_route_table.private[each.key].id
   destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = each.value.id
+  nat_gateway_id         = aws_nat_gateway.nat[each.key].id
 }

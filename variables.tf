@@ -20,3 +20,9 @@ variable "bucket_name" {
   description = "Name of the S3 bucket"
   default     = "my-static-bucket-example"
 }
+
+variable "kms_key_id" {
+  description = "KMS Key ARN for RDS encryption"
+  type        = string
+  sensitive   = true
+}

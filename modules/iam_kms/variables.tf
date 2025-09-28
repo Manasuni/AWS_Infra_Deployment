@@ -1,2 +1,7 @@
-variable "project_name" {}
-variable "environment" {}
+variable "project_name" {
+  type = string
+}
+
+variable "environment" {
+  type = string
+}
