@@ -51,21 +51,6 @@ RDS instances without encryption
 📂 Sample Gemini Security Report (SECURITY_REPORT.md).
 
 
-
-
-
----
-
-📂 Repository Structure
-
-.
-├── /terraform           # Terraform code for GuardDuty, Config rules, IAM policies
-├── /iam                 # IAM least-privilege JSON policies
-├── /github/workflows    # GitHub Actions workflow with Gemini integration
-├── SECURITY_REPORT.md   # Sample Gemini-generated report
-└── README.md            # Documentation
-
-
 ---
 
 ⚙️ Setup & Deployment
