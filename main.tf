@@ -71,7 +71,7 @@ resource "aws_lambda_function" "strip_pii" {
   function_name    = "${var.app_name}-strip-pii"
   role             = aws_iam_role.lambda_exec.arn
   handler          = "index.handler"
-  runtime          = "nodejs18.x"
+  runtime          = "python3.11"
   source_code_hash = filebase64sha256("lambda/pii_strip.zip")
 }
 
