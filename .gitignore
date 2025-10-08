@@ -22,3 +22,10 @@ override.tf.json
 .terraformrc
 terraform.rc
 terraform.tfvars
+
+# Terraform Plan Files
+tfplan
+tfplan.json
+destroy-plan.txt
+destroy-plan.out
+new-destroy-plan.out
