@@ -39,7 +39,7 @@ jobs:
 
       # 6. Terraform Apply
       - name: Terraform Apply
-        if: github.ref == 'refs/heads/feature/security-iac'
+        if: github.ref == 'refs/heads/feature/security'
         run: terraform apply -auto-approve tfplan
 
       # 7. Create SSM Parameters (optional if Terraform handles them)

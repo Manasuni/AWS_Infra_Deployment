@@ -8,3 +8,9 @@ crash.log
 *.backup
 *.log
 *.tmp
+
+# Ignore Terraform plan files
+tfplan
+*.tfplan
+*.out
+*.txt

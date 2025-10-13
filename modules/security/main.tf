@@ -1,7 +1,7 @@
 resource "aws_guardduty_detector" "main" {
   enable = true
 
-  lifecycle {
+  /*lifecycle {
     prevent_destroy = true
-  }
+  }*/
 }
