@@ -7,7 +7,10 @@ resource "aws_iam_role" "provisioner" {
     Statement = [{
       Effect = "Allow"
       Principal = {
-        Service = "ec2.amazonaws.com"
+        Service = [
+          "config.amazonaws.com", # AWS Config needs this
+          "ec2.amazonaws.com"     # Terraform running on EC2 may need this
+        ]
       }
       Action = "sts:AssumeRole"
     }]
